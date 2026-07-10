@@ -98,13 +98,11 @@
     
     let state = { mode: 'select', selectedObjs: [], linkSource: null, links: [], camCounter: 0, shelfCounter: 0 };
     
-    // エディタのパン・ズーム用変数
     let vbX = 0, vbY = 0, vbW = 800, vbH = 600;
     svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
     let isEditorPanning = false;
     let lastPanClientX = 0, lastPanClientY = 0;
 
-    // 写真のローカルURLを保持するマップ
     const fileUrlMap = {};
 
     const snap = (val) => Math.round(val / GRID_SIZE) * GRID_SIZE;
@@ -164,7 +162,6 @@
         const wasHidden = wrapper.style.display === 'none';
         wrapper.style.display = 'block';
         
-        // A-Frameキャンバスのサイズ再計算を強制
         if (wasHidden) {
           setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
         }
@@ -188,7 +185,7 @@
       if (imgFile) {
          const src = fileUrlMap[imgFile] ? fileUrlMap[imgFile] : imgFile;
          previewSky.setAttribute('src', src);
-         previewSky.removeAttribute('color');
+         previewSky.setAttribute('color', '#FFF'); 
       } else {
          previewSky.removeAttribute('src');
          previewSky.setAttribute('color', '#222');
@@ -197,7 +194,6 @@
       const r = parseFloat(rot) || 0;
       previewSky.setAttribute('rotation', `0 ${r} 0`);
       
-      // カメラの向きを正面(0度)にリセット
       if(previewCam && previewCam.components['look-controls']) {
          previewCam.components['look-controls'].pitchObject.rotation.x = 0;
          previewCam.components['look-controls'].yawObject.rotation.y = 0;
@@ -222,7 +218,6 @@
         const file = e.target.files[0];
         const fileName = file.name;
         
-        // ファイルをプレビュー用にブラウザメモリに一時保存
         fileUrlMap[fileName] = URL.createObjectURL(file);
         
         document.getElementById('prop-img').value = fileName; 
@@ -243,7 +238,6 @@
 
     let dragInfo = null; let selectionBox = { active: false, startX: 0, startY: 0, el: document.getElementById('selection-box') };
 
-    // --- エディタ画面のパン（移動）処理 ---
     workspace.addEventListener('mousedown', (e) => {
       if (e.button === 1 || (e.button === 0 && e.altKey)) {
         isEditorPanning = true;
@@ -301,7 +295,6 @@
       });
     }
 
-    // --- エディタ画面のホイールズーム ---
     workspace.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoom = e.deltaY > 0 ? 1.1 : 0.9;
@@ -312,7 +305,6 @@
       svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
     }, {passive: false});
 
-    // --- エディタ画面のiPadタッチ（ピンチズーム・2本指パン） ---
     let initialTouchDist = null;
     let lastTouchCX = null; let lastTouchCY = null;
     workspace.addEventListener('touchstart', (e) => {
@@ -358,7 +350,6 @@
     }, {passive: false});
     workspace.addEventListener('touchend', (e) => { if (e.touches.length < 2) initialTouchDist = null; });
 
-    // --- 通常のドラッグ操作 ---
     svg.addEventListener('mousemove', (e) => {
       if (isEditorPanning) return;
       const pt = getSVGPoint(e);
