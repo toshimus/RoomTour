@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8">
   <title>図書館VR マップエディタ (完全版・カニ歩き対応)</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
     body { font-family: sans-serif; display: flex; background: #222; color: #ddd; margin: 0; height: 100vh; overflow: hidden; }
-    #toolbar { width: 280px; background: #333; padding: 15px; border-right: 1px solid #555; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+    #toolbar { width: 280px; background: #333; padding: 15px; border-right: 1px solid #555; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; z-index: 100; }
     #workspace { flex-grow: 1; display: flex; background: #111; position: relative; user-select: none; overflow: hidden; }
     svg { background: white; cursor: default; width: 100%; height: 100%; display: block; }
     
@@ -64,9 +65,13 @@
         <option value="270">270度 (左回転)</option>
       </select>
 
-      <div id="preview-wrapper" style="width: 100%; height: 120px; margin-top: 15px; position: relative; border: 1px solid #777; border-radius: 4px; overflow: hidden; display: none; background-color: #000; background-size: 400% 100%; background-repeat: repeat-x; background-position-x: 50%; background-position-y: center; transition: background-position 0.3s ease;">
-        <div style="position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(255,152,0,0.8); transform: translateX(-50%); pointer-events: none;"></div>
-        <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #FF9800; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; white-space: nowrap;">正面 (Front)</div>
+      <div id="preview-wrapper" style="width: 100%; height: 160px; margin-top: 15px; position: relative; border: 1px solid #777; border-radius: 4px; overflow: hidden; display: none; background: #000;">
+        <a-scene embedded vr-mode-ui="enabled: false" loading-screen="enabled: false" keyboard-shortcuts="enterVR: false" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
+          <a-sky id="preview-sky" color="#222"></a-sky>
+          <a-camera id="preview-cam" position="0 0 0" look-controls="reverseMouseDrag: true" wasd-controls="enabled: false" fov="80"></a-camera>
+        </a-scene>
+        <div style="position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(255,152,0,0.8); transform: translateX(-50%); pointer-events: none; z-index: 10;"></div>
+        <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #FF9800; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; white-space: nowrap; z-index: 10;">正面 (Front)</div>
       </div>
     </div>
   </div>
@@ -154,7 +159,15 @@
       const cams = state.selectedObjs.filter(g => g.dataset.type === 'camera');
       if (state.selectedObjs.length === 1 && cams.length === 1) {
         document.getElementById('properties').style.display = 'flex';
-        document.getElementById('preview-wrapper').style.display = 'block';
+        
+        const wrapper = document.getElementById('preview-wrapper');
+        const wasHidden = wrapper.style.display === 'none';
+        wrapper.style.display = 'block';
+        
+        // A-Frameキャンバスのサイズ再計算を強制
+        if (wasHidden) {
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
+        }
 
         const cam = cams[0];
         document.getElementById('prop-img').value = cam.dataset.img || '';
@@ -169,18 +182,26 @@
     }
 
     function updatePreview(imgFile, rot) {
-      const wrapper = document.getElementById('preview-wrapper');
+      const previewSky = document.getElementById('preview-sky');
+      const previewCam = document.getElementById('preview-cam');
+
       if (imgFile) {
-         // ローカル読み込みURLがあれば優先し、なければファイル名そのまま（同階層を想定）
          const src = fileUrlMap[imgFile] ? fileUrlMap[imgFile] : imgFile;
-         wrapper.style.backgroundImage = `url('${src}')`;
+         previewSky.setAttribute('src', src);
+         previewSky.removeAttribute('color');
       } else {
-         wrapper.style.backgroundImage = 'none';
+         previewSky.removeAttribute('src');
+         previewSky.setAttribute('color', '#222');
       }
       
       const r = parseFloat(rot) || 0;
-      // プレビューの背景位置を計算 (90度ごとに100%分左へスライドさせ、無限にループさせる)
-      wrapper.style.backgroundPositionX = `calc(50% - ${(r / 90) * 100}%)`;
+      previewSky.setAttribute('rotation', `0 ${r} 0`);
+      
+      // カメラの向きを正面(0度)にリセット
+      if(previewCam && previewCam.components['look-controls']) {
+         previewCam.components['look-controls'].pitchObject.rotation.x = 0;
+         previewCam.components['look-controls'].yawObject.rotation.y = 0;
+      }
     }
 
     function updateCameraProp(key) {
