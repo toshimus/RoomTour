@@ -30,7 +30,7 @@
     .btn-shelf:hover { background: #A0522D; }
     
     #properties { margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; display: none; flex-direction: column; gap: 8px; }
-    input[type="text"], input[type="number"], select { padding: 6px; border: 1px solid #777; border-radius: 4px; background: #222; color: white; width: 100%; box-sizing: border-box; }
+    input[type="text"], select { padding: 6px; border: 1px solid #777; border-radius: 4px; background: #222; color: white; width: 100%; box-sizing: border-box; }
     .file-row { display: flex; gap: 5px; }
     
     .draggable { cursor: move; }
@@ -84,7 +84,12 @@
       
       <label>基準回転 (度)</label>
       <div style="display: flex; gap: 5px;">
-        <input type="number" id="prop-rot" value="0" style="flex-grow: 1; min-width: 0;" oninput="updateCameraProp('rot')" onchange="saveHistory()">
+        <select id="prop-rot" onchange="updateCameraProp('rot'); saveHistory()" style="flex-grow: 1;">
+          <option value="0">0度 (そのまま)</option>
+          <option value="90">90度 (右回転)</option>
+          <option value="180">180度 (反転)</option>
+          <option value="270">270度 (左回転)</option>
+        </select>
         <button onclick="rotateCamera(-90)" title="左に90度回転" style="padding: 6px 10px;">↺</button>
         <button onclick="rotateCamera(90)" title="右に90度回転" style="padding: 6px 10px;">↻</button>
       </div>
@@ -109,7 +114,7 @@
         <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #FF9800; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; white-space: nowrap; z-index: 10;">正面 (Front)</div>
       </div>
 
-      <div id="preview-wrapper-flat" data-yaw="0" style="width: 100%; height: 160px; margin-top: 10px; position: relative; border: 1px solid #777; border-radius: 4px; overflow: hidden; display: none; background-color: #000; background-size: 400% 100%; background-repeat: repeat-x; background-position-x: 50%; background-position-y: center; transition: background-position 0.3s ease;">
+      <div id="preview-wrapper-flat" style="width: 100%; height: 160px; margin-top: 10px; position: relative; border: 1px solid #777; border-radius: 4px; overflow: hidden; display: none; background-color: #000; background-size: 400% 100%; background-repeat: repeat-x; background-position-x: 50%; background-position-y: center; transition: background-position 0.3s ease;">
         <div style="position: absolute; top: 0; left: 50%; width: 2px; height: 100%; background: rgba(255,152,0,0.8); transform: translateX(-50%); pointer-events: none; z-index: 10;"></div>
         <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #FF9800; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 4px; pointer-events: none; white-space: nowrap; z-index: 10;">正面 (Front)</div>
       </div>
@@ -128,9 +133,7 @@
       <g id="layer-shelves"></g>
       <g id="layer-cameras"></g>
       <rect id="selection-box" x="0" y="0" width="0" height="0"></rect>
-      
-      <g id="editor-player-arrow" style="display: none; pointer-events: auto; cursor: grab;">
-        <circle cx="0" cy="0" r="25" fill="transparent"></circle>
+      <g id="editor-player-arrow" style="display: none; pointer-events: none;">
         <polygon points="0,-22 -14,14 0,6 14,14" fill="#FF9800" stroke="#fff" stroke-width="2.5"></polygon>
       </g>
     </svg>
@@ -147,15 +150,13 @@
     svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
     let isEditorPanning = false;
     let lastPanClientX = 0, lastPanClientY = 0;
-    
-    const arrowEl = document.getElementById('editor-player-arrow');
-    let isDraggingArrow = false;
 
     const fileUrlMap = {};
 
     let history = [];
     let historyIndex = -1;
     let isRestoring = false;
+    let projectFileHandle = null; // ファイルアクセスAPI用のハンドル
 
     function getCurrentState() {
       return {
@@ -224,6 +225,7 @@
       let pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse());
     };
 
+    // 折りたたみ機能
     function toggleSection(id, headerEl) {
       const content = document.getElementById(id);
       const icon = headerEl.querySelector('.toggle-icon');
@@ -292,16 +294,6 @@
         document.getElementById('prop-name').value = cam.dataset.name || '';
         document.getElementById('prop-rot').value = cam.dataset.rot || '0';
 
-        // 別のカメラを選択した時は視線をリセットする
-        const wrapperFlat = document.getElementById('preview-wrapper-flat');
-        wrapperFlat.dataset.yaw = "0";
-        
-        const previewCam = document.getElementById('preview-cam');
-        if (previewCam && previewCam.components['look-controls']) {
-             previewCam.components['look-controls'].yawObject.rotation.y = 0;
-             previewCam.components['look-controls'].pitchObject.rotation.x = 0;
-        }
-
         updatePreview(cam);
         startPreviewSync();
       } else { 
@@ -320,6 +312,7 @@
     let previewSyncAnim = null;
     function startPreviewSync() {
       if (previewSyncAnim) cancelAnimationFrame(previewSyncAnim);
+      const arrowEl = document.getElementById('editor-player-arrow');
       
       const sync = () => {
         const cams = state.selectedObjs.filter(g => g.dataset.type === 'camera');
@@ -344,11 +337,9 @@
               yaw = -previewCam.object3D.rotation.y * 180 / Math.PI;
            }
         } else {
-           const wrapperFlat = document.getElementById('preview-wrapper-flat');
-           yaw = parseFloat(wrapperFlat.dataset.yaw) || 0;
+           yaw = 0;
         }
         
-        // 基準回転(rot)を加算せず、純粋な視線方向(yaw)のみで矢印を回転させる
         arrowEl.setAttribute('transform', `translate(${cx}, ${cy}) rotate(${yaw})`);
         
         previewSyncAnim = requestAnimationFrame(sync);
@@ -358,7 +349,7 @@
 
     let previewRotateAnim = null;
 
-    function updatePreview(camObj, instant = false) {
+    function updatePreview(camObj) {
       const imgFile = camObj.dataset.img;
       const rot = camObj.dataset.rot;
       const camId = camObj.dataset.id;
@@ -378,6 +369,7 @@
          wrapperFlat.style.display = 'block';
       }
 
+      // 平面モードの更新
       if (imgFile) {
          const src = fileUrlMap[imgFile] ? fileUrlMap[imgFile] : imgFile;
          wrapperFlat.style.backgroundImage = `url('${src}')`;
@@ -385,13 +377,15 @@
          wrapperFlat.style.backgroundImage = 'none';
       }
       
-      const rotFloat = parseFloat(rot) || 0;
-      const yawFloat = parseFloat(wrapperFlat.dataset.yaw) || 0;
-      const targetRotY = (rotFloat + yawFloat) % 360;
+      const targetRotY = (parseFloat(rot) || 0) % 360;
       wrapperFlat.style.transition = 'none';
       wrapperFlat.style.backgroundPositionX = `calc(50% - ${((90 + targetRotY) / 90) * 100}%)`;
 
+
+
+      // 360モードの更新（アニメーション含む）
       const previewSky = document.getElementById('preview-sky');
+      const previewCam = document.getElementById('preview-cam');
       const previewLinks = document.getElementById('preview-links');
 
       if (imgFile) {
@@ -409,35 +403,48 @@
           if (previewRotateAnim) cancelAnimationFrame(previewRotateAnim);
           
           let currentYDeg = previewSky.object3D.rotation.y * 180 / Math.PI;
-          let diff = (rotFloat - currentYDeg) % 360;
+          let diff = (targetRotY - currentYDeg) % 360;
           if (diff > 180) diff -= 360;
           if (diff < -180) diff += 360;
           let finalYDeg = currentYDeg + diff;
 
-          // アニメーション時に視線（yaw/pitch）はリセットせず、画像の回転（rot）のみを適用する
-          if (instant || Math.abs(diff) < 0.1) {
-              previewSky.object3D.rotation.y = finalYDeg * Math.PI / 180;
-              previewSky.setAttribute('rotation', `0 ${finalYDeg % 360} 0`);
-              previewRotateAnim = null;
-          } else {
-              const startTime = performance.now();
-              function animatePreviewRot(time) {
-                 let elapsed = time - startTime;
-                 let progress = Math.min(elapsed / 500, 1);
-                 let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+          let pitchObj = null, yawObj = null;
+          let startPitch = 0, startYaw = 0;
 
-                 previewSky.object3D.rotation.y = (currentYDeg + (finalYDeg - currentYDeg) * ease) * Math.PI / 180;
-
-                 if(progress < 1) {
-                   previewRotateAnim = requestAnimationFrame(animatePreviewRot);
-                 } else {
-                   previewSky.object3D.rotation.y = finalYDeg * Math.PI / 180;
-                   previewSky.setAttribute('rotation', `0 ${finalYDeg % 360} 0`);
-                   previewRotateAnim = null;
-                 }
-              }
-              previewRotateAnim = requestAnimationFrame(animatePreviewRot);
+          if(previewCam && previewCam.components['look-controls']) {
+             pitchObj = previewCam.components['look-controls'].pitchObject;
+             yawObj = previewCam.components['look-controls'].yawObject;
+             startPitch = pitchObj.rotation.x;
+             startYaw = yawObj.rotation.y;
           }
+
+          const startTime = performance.now();
+          function animatePreviewRot(time) {
+             let elapsed = time - startTime;
+             let progress = Math.min(elapsed / 500, 1);
+             // easeInOutQuad
+             let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+             previewSky.object3D.rotation.y = (currentYDeg + (finalYDeg - currentYDeg) * ease) * Math.PI / 180;
+
+             if (pitchObj && yawObj) {
+               pitchObj.rotation.x = startPitch * (1 - ease);
+               yawObj.rotation.y = startYaw * (1 - ease);
+             }
+
+             if(progress < 1) {
+               previewRotateAnim = requestAnimationFrame(animatePreviewRot);
+             } else {
+               previewSky.object3D.rotation.y = finalYDeg * Math.PI / 180;
+               previewSky.setAttribute('rotation', `0 ${finalYDeg % 360} 0`);
+               if (pitchObj && yawObj) {
+                  pitchObj.rotation.x = 0;
+                  yawObj.rotation.y = 0;
+               }
+               previewRotateAnim = null;
+             }
+          }
+          previewRotateAnim = requestAnimationFrame(animatePreviewRot);
       }
 
       let linksHTML = '';
@@ -486,17 +493,18 @@
 
     function rotateCamera(delta) {
       if (state.selectedObjs.length === 1 && state.selectedObjs[0].dataset.type === 'camera') {
-        const input = document.getElementById('prop-rot');
-        let currentRot = parseInt(input.value, 10);
+        const select = document.getElementById('prop-rot');
+        let currentRot = parseInt(select.value, 10);
         if (isNaN(currentRot)) currentRot = 0;
         currentRot = (currentRot + delta + 360) % 360;
-        input.value = currentRot.toString();
+        select.value = currentRot.toString();
+        // セレクトボックスの値を更新後、カメラプロパティ更新関数を呼び出す
         updateCameraProp('rot');
         saveHistory();
       }
     }
 
-    function updateCameraProp(key, instant = false) {
+    function updateCameraProp(key) {
       if (state.selectedObjs.length === 1 && state.selectedObjs[0].dataset.type === 'camera') {
         const val = document.getElementById(`prop-${key}`).value; state.selectedObjs[0].dataset[key] = val;
         if (key === 'name') {
@@ -504,7 +512,7 @@
            if (textEl) { const numMatch = val.match(/\d+/); textEl.textContent = numMatch ? numMatch[0] : val.substring(0, 3); }
         }
         if (key === 'img' || key === 'rot' || key === 'name') {
-           updatePreview(state.selectedObjs[0], instant);
+           updatePreview(state.selectedObjs[0]);
         }
       }
       updateLinks();
@@ -575,13 +583,6 @@
         e.preventDefault();
       }
     });
-    
-    arrowEl.addEventListener('mousedown', (e) => {
-       if (e.button !== 0 || state.mode === 'link') return;
-       e.stopPropagation();
-       isDraggingArrow = true;
-       arrowEl.style.cursor = 'grabbing';
-    });
 
     window.addEventListener('mousemove', (e) => {
       if (isEditorPanning) {
@@ -596,7 +597,6 @@
         lastPanClientY = e.clientY;
       }
     });
-    
     window.addEventListener('mouseup', () => { isEditorPanning = false; });
 
     document.getElementById('bg-rect').addEventListener('mousedown', (e) => {
@@ -690,59 +690,6 @@
     svg.addEventListener('mousemove', (e) => {
       if (isEditorPanning) return;
       const pt = getSVGPoint(e);
-      
-      if (isDraggingArrow && state.selectedObjs.length === 1) {
-          const cam = state.selectedObjs[0];
-          const circle = cam.querySelector('circle');
-          const cx = parseFloat(circle.getAttribute('cx'));
-          const cy = parseFloat(circle.getAttribute('cy'));
-          
-          const dx = pt.x - cx;
-          const dy = pt.y - cy;
-          let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
-          angle = (angle + 360) % 360;
-          
-          const camId = cam.dataset.id;
-          const connections = state.links.filter(l => l.sourceId === camId || l.targetId === camId);
-          for (let l of connections) {
-             const targetId = l.sourceId === camId ? l.targetId : l.sourceId;
-             const targetCam = document.querySelector(`[data-id="${targetId}"]`);
-             if (targetCam) {
-                const tc = targetCam.querySelector('circle');
-                const tcx = parseFloat(tc.getAttribute('cx'));
-                const tcy = parseFloat(tc.getAttribute('cy'));
-                let tAngle = Math.atan2(tcx - cx, -(tcy - cy)) * 180 / Math.PI;
-                tAngle = (tAngle + 360) % 360;
-                
-                let diff = Math.abs(angle - tAngle);
-                if (diff > 180) diff = 360 - diff;
-                if (diff < 8) { 
-                    angle = tAngle;
-                    break;
-                }
-             }
-          }
-          
-          const modeInput = document.querySelector('input[name="preview-mode"]:checked');
-          const mode = modeInput ? modeInput.value : '360';
-          
-          if (mode === '360') {
-             const previewCam = document.getElementById('preview-cam');
-             if (previewCam && previewCam.components['look-controls']) {
-                // 基準回転(rot)は考慮せず、ドラッグした角度をそのままYawとして設定する
-                previewCam.components['look-controls'].yawObject.rotation.y = -angle * Math.PI / 180;
-             }
-          } else if (mode === 'flat') {
-             const wrapperFlat = document.getElementById('preview-wrapper-flat');
-             wrapperFlat.dataset.yaw = angle; // Yawのみを記録
-             const rot = parseFloat(cam.dataset.rot) || 0;
-             const targetRotY = (rot + angle) % 360;
-             wrapperFlat.style.backgroundPositionX = `calc(50% - ${((90 + targetRotY) / 90) * 100}%)`;
-          }
-          
-          return; 
-      }
-      
       if (selectionBox.active) {
         const x = Math.min(pt.x, selectionBox.startX); const y = Math.min(pt.y, selectionBox.startY);
         const w = Math.abs(pt.x - selectionBox.startX); const h = Math.abs(pt.y - selectionBox.startY);
@@ -777,12 +724,6 @@
 
     svg.addEventListener('mouseup', () => { 
       if (isEditorPanning) return;
-      if (isDraggingArrow) {
-          isDraggingArrow = false;
-          arrowEl.style.cursor = 'grab';
-          saveHistory();
-          return;
-      }
       let moved = false;
       if (dragInfo && dragInfo.hasMoved) moved = true;
       dragInfo = null; 
@@ -796,17 +737,7 @@
       }
       if (moved) saveHistory();
     });
-    
-    svg.addEventListener('mouseleave', () => { 
-        dragInfo = null; 
-        selectionBox.active = false; 
-        selectionBox.el.style.display = 'none'; 
-        if (isDraggingArrow) {
-            isDraggingArrow = false;
-            arrowEl.style.cursor = 'grab';
-            saveHistory();
-        }
-    });
+    svg.addEventListener('mouseleave', () => { dragInfo = null; selectionBox.active = false; selectionBox.el.style.display = 'none'; });
 
     function toggleLinkMode() {
       const btn = document.getElementById('btn-link');
@@ -855,6 +786,7 @@
       }
     }
 
+    // ★ ファイルアクセスAPIを使用した読込・保存処理 ★
     async function loadProjectAction() {
       if (window.showOpenFilePicker) {
         try {
@@ -868,10 +800,12 @@
           history = [];
           historyIndex = -1;
           saveHistory();
+          projectFileHandle = fileHandle; // 保存用のハンドルを記憶
         } catch (err) {
           console.log("読込キャンセルまたはエラー", err);
         }
       } else {
+        // Fallback (API未対応ブラウザ用)
         document.getElementById('file-input').click();
       }
     }
@@ -886,6 +820,7 @@
           history = [];
           historyIndex = -1;
           saveHistory();
+          projectFileHandle = null; // フォールバックからの読込時はハンドルをリセット
           document.getElementById('file-input').value = ""; 
         } catch (err) { alert("ファイルの読み込みに失敗しました。"); }
       };
@@ -898,14 +833,17 @@
 
       try {
         if (window.showSaveFilePicker) {
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'vrtour_project.json',
-            types: [{ description: 'JSON File', accept: {'application/json': ['.json']} }]
-          });
-          const writable = await fileHandle.createWritable();
+          if (!projectFileHandle) {
+            projectFileHandle = await window.showSaveFilePicker({
+              suggestedName: 'vrtour_project.json',
+              types: [{ description: 'JSON File', accept: {'application/json': ['.json']} }]
+            });
+          }
+          const writable = await projectFileHandle.createWritable();
           await writable.write(jsonStr);
           await writable.close();
         } else {
+          // Fallback (API未対応ブラウザ用)
           const blob = new Blob([jsonStr], { type: 'application/json' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
@@ -1402,6 +1340,7 @@
       } catch (err) { console.log("保存キャンセル", err); }
     }
 
+    // 初期状態を履歴に保存
     saveHistory();
   </script>
 </body>

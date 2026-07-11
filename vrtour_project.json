@@ -1,0 +1,127 @@
+{
+  "camCounter": 8,
+  "shelfCounter": 3,
+  "cameras": [
+    {
+      "id": "cam_1",
+      "img": "360 (3).JPG",
+      "name": "場所 1",
+      "rot": "90",
+      "x": 460,
+      "y": 340
+    },
+    {
+      "id": "cam_2",
+      "img": "360 (4).JPG",
+      "name": "場所 2",
+      "rot": "90",
+      "x": 380,
+      "y": 340
+    },
+    {
+      "id": "cam_3",
+      "img": "360 (5).JPG",
+      "name": "場所 3",
+      "rot": "90",
+      "x": 300,
+      "y": 340
+    },
+    {
+      "id": "cam_4",
+      "img": "360 (6).JPG",
+      "name": "場所 4",
+      "rot": "90",
+      "x": 220,
+      "y": 340
+    },
+    {
+      "id": "cam_5",
+      "img": "360 (7).JPG",
+      "name": "場所 5",
+      "rot": "90",
+      "x": 220,
+      "y": 300
+    },
+    {
+      "id": "cam_6",
+      "img": "360 (8).JPG",
+      "name": "場所 6",
+      "rot": "90",
+      "x": 220,
+      "y": 260
+    },
+    {
+      "id": "cam_7",
+      "img": "360 (9).JPG",
+      "name": "場所 7",
+      "rot": "90",
+      "x": 300,
+      "y": 260
+    },
+    {
+      "id": "cam_8",
+      "img": "360 (10).JPG",
+      "name": "場所 8",
+      "rot": "90",
+      "x": 400,
+      "y": 260
+    }
+  ],
+  "shelves": [
+    {
+      "id": "shelf_1",
+      "x": 240,
+      "y": 280,
+      "w": 200,
+      "h": 40
+    },
+    {
+      "id": "shelf_2",
+      "x": 200,
+      "y": 380,
+      "w": 400,
+      "h": 40
+    },
+    {
+      "id": "shelf_3",
+      "x": 160,
+      "y": 40,
+      "w": 40,
+      "h": 340
+    }
+  ],
+  "links": [
+    {
+      "sourceId": "cam_1",
+      "targetId": "cam_2"
+    },
+    {
+      "sourceId": "cam_2",
+      "targetId": "cam_3"
+    },
+    {
+      "sourceId": "cam_3",
+      "targetId": "cam_4"
+    },
+    {
+      "sourceId": "cam_4",
+      "targetId": "cam_5"
+    },
+    {
+      "sourceId": "cam_5",
+      "targetId": "cam_6"
+    },
+    {
+      "sourceId": "cam_6",
+      "targetId": "cam_7"
+    },
+    {
+      "sourceId": "cam_7",
+      "targetId": "cam_8"
+    },
+    {
+      "sourceId": "cam_8",
+      "targetId": "cam_1"
+    }
+  ]
+}
