@@ -552,7 +552,7 @@
     }
     
     window.addEventListener('keydown', (e) => { 
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
+      if (e.target.tagName === 'INPUT') return; 
       if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected(); 
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z') {
@@ -562,47 +562,6 @@
           e.preventDefault();
           redo();
         }
-      }
-      
-      // オブジェクトの微調整（Nudge）機能のセーフティ対応版
-      if (state.selectedObjs.length > 0 && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        const step = e.shiftKey ? GRID_SIZE : 1;
-        let dx = 0, dy = 0;
-        if (e.key === 'ArrowUp') dy = -step;
-        if (e.key === 'ArrowDown') dy = step;
-        if (e.key === 'ArrowLeft') dx = -step;
-        if (e.key === 'ArrowRight') dx = step;
-
-        state.selectedObjs.forEach(obj => {
-          if (obj.dataset.type === 'shelf') {
-            const rect = obj.querySelector('rect');
-            const handle = obj.querySelector('.handle');
-            if (rect && handle) {
-               const newX = parseFloat(rect.getAttribute('x') || 0) + dx;
-               const newY = parseFloat(rect.getAttribute('y') || 0) + dy;
-               rect.setAttribute('x', newX);
-               rect.setAttribute('y', newY);
-               handle.setAttribute('x', parseFloat(handle.getAttribute('x') || 0) + dx);
-               handle.setAttribute('y', parseFloat(handle.getAttribute('y') || 0) + dy);
-            }
-          } else if (obj.dataset.type === 'camera') {
-            const circle = obj.querySelector('circle');
-            const textEl = obj.querySelector('text');
-            if (circle) {
-               const newX = parseFloat(circle.getAttribute('cx') || 0) + dx;
-               const newY = parseFloat(circle.getAttribute('cy') || 0) + dy;
-               circle.setAttribute('cx', newX);
-               circle.setAttribute('cy', newY);
-               if (textEl) {
-                 textEl.setAttribute('x', parseFloat(textEl.getAttribute('x') || newX) + dx);
-                 textEl.setAttribute('y', parseFloat(textEl.getAttribute('y') || newY) + dy);
-               }
-            }
-          }
-        });
-        updateLinks();
-        saveHistory();
       }
     });
 
@@ -967,8 +926,8 @@
 
       let assetsHTML = '';
       cams.forEach((c, i) => {
-         const safeId = ((c.img || '').split('.')[0] || `cam_img_${i}`).replace(/[^a-zA-Z0-9_\-]/g, '_');
-         assetsHTML += `      <img id="${safeId}" src="${c.img || ''}" crossorigin="anonymous">\n`;
+         const safeId = c.img.split('.')[0] || `cam_img_${i}`;
+         assetsHTML += `      <img id="${safeId}" src="${c.img}" crossorigin="anonymous">\n`;
       });
 
       let linksHTML = '';
@@ -977,7 +936,6 @@
         const connectedIds = state.links.filter(l => l.sourceId === currentCam.id || l.targetId === currentCam.id).map(l => l.sourceId === currentCam.id ? l.targetId : l.sourceId);
         connectedIds.forEach(targetId => {
           const targetCam = cams.find(c => c.id === targetId);
-          if (!targetCam) return;
           const dx = targetCam.x - currentCam.x; 
           const dz = targetCam.z - currentCam.z; 
           const distance = 12; 
@@ -991,7 +949,7 @@
           const rotY = (360 - angleDeg).toFixed(2); 
           const textRotY = (360 - angleDeg).toFixed(2); 
           
-          const targetAssetId = ((targetCam.img || '').split('.')[0] || `cam_img_${targetCam.id}`).replace(/[^a-zA-Z0-9_\-]/g, '_');
+          const targetAssetId = targetCam.img.split('.')[0];
           const numMatch = targetCam.name.match(/\d+/);
           const displayNum = numMatch ? numMatch[0] : targetCam.name.substring(0, 3);
           
@@ -1050,7 +1008,7 @@
       const initialNumMatch = cams[0].name.match(/\d+/);
       const initialDisplayNum = initialNumMatch ? initialNumMatch[0] : cams[0].name;
 
-      const firstCamId = ((cams[0].img || '').split('.')[0] || `cam_img_0`).replace(/[^a-zA-Z0-9_\-]/g, '_');
+      const firstCamId = cams[0].img.split('.')[0];
       return `<!DOCTYPE html>
 <html>
 <head>
