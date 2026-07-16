@@ -5,170 +5,69 @@
   <title>図書館 VRツアー</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
+    #initial-loader {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #111; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 99999;
+      color: #FF9800; font-family: sans-serif; transition: opacity 0.5s;
+    }
+    .spinner {
+      width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #FF9800;
+      border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     #ui-overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 9998;
-      padding: 5%;
-      box-sizing: border-box;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; display: flex; justify-content: space-between;
+      align-items: center; z-index: 9998; padding: 5%; box-sizing: border-box;
     }
     .nav-overlay-btn {
-      pointer-events: auto;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.8);
-      border-radius: 8px;
-      padding: 15px 30px;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      backdrop-filter: blur(4px);
-      display: flex;
-      visibility: hidden;
-      align-items: center;
-      gap: 4px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      pointer-events: auto; background: rgba(0, 0, 0, 0.5); color: white;
+      border: 2px solid rgba(255, 255, 255, 0.8); border-radius: 8px;
+      padding: 15px 30px; font-size: 24px; font-weight: bold; cursor: pointer;
+      transition: all 0.2s ease-in-out; backdrop-filter: blur(4px); display: flex;
+      visibility: hidden; align-items: center; gap: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .nav-overlay-btn:hover {
-      background: rgba(33, 150, 243, 0.8);
-      transform: scale(1.05);
-    }
-    .nav-overlay-btn:active {
-      transform: scale(0.95);
-    }
+    .nav-overlay-btn:hover { background: rgba(33, 150, 243, 0.8); transform: scale(1.05); }
+    .nav-overlay-btn:active { transform: scale(0.95); }
 
     #location-overlay {
-      position: absolute;
-      top: 20px; left: 20px;
-      background: rgba(17, 17, 17, 0.7);
-      color: #FF9800;
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 8px;
-      padding: 10px 25px;
-      font-size: 28px;
-      font-weight: bold;
-      z-index: 10000;
-      pointer-events: none;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      font-family: sans-serif;
+      position: absolute; top: 20px; left: 20px; background: rgba(17, 17, 17, 0.7);
+      color: #FF9800; border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 8px;
+      padding: 10px 25px; font-size: 28px; font-weight: bold; z-index: 10000;
+      pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px); font-family: sans-serif;
     }
 
     #minimap-overlay {
-      position: absolute;
-      top: 20px; right: 20px;
-      width: 240px;
-      background: rgba(17, 17, 17, 0.7);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 8px;
-      pointer-events: auto;
-      z-index: 10000;
-      touch-action: none;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      position: absolute; top: 20px; right: 20px; width: 240px; background: rgba(17, 17, 17, 0.7);
+      border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 8px; pointer-events: auto;
+      z-index: 10000; touch-action: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
     #minimap-header {
-      color: #fff;
-      font-size: 13px;
-      font-weight: bold;
-      padding: 6px 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-      user-select: none;
-      cursor: move;
-      background: rgba(255,255,255,0.1);
-      border-top-left-radius: 6px;
-      border-top-right-radius: 6px;
+      color: #fff; font-size: 13px; font-weight: bold; padding: 6px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.2); user-select: none; cursor: move;
+      background: rgba(255,255,255,0.1); border-top-left-radius: 6px; border-top-right-radius: 6px;
     }
 
     #floor-controls {
-      position: absolute;
-      right: 20px;
-      bottom: 20px;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      position: absolute; right: 20px; bottom: 20px; z-index: 10000;
+      display: flex; flex-direction: column; gap: 10px;
     }
     .floor-btn {
-      background: rgba(17, 17, 17, 0.7);
-      color: #FF9800;
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 8px;
-      padding: 12px 24px;
-      font-size: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      backdrop-filter: blur(4px);
-      transition: background 0.2s, transform 0.1s;
+      background: rgba(17, 17, 17, 0.7); color: #FF9800; border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 8px; padding: 12px 24px; font-size: 20px; font-weight: bold;
+      cursor: pointer; backdrop-filter: blur(4px); transition: background 0.2s, transform 0.1s;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .floor-btn:hover {
-      background: rgba(33, 150, 243, 0.8);
-      color: #fff;
-      transform: scale(1.05);
-    }
-    .floor-btn:active {
-      transform: scale(0.95);
-    }
-
-    /* ★追加: ローディング中の画面スタイル */
-    #loading-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: #FF9800;
-      padding: 20px 40px;
-      border-radius: 8px;
-      font-size: 24px;
-      font-weight: bold;
-      z-index: 10001;
-      display: none;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-      border: 1px solid #FF9800;
-      pointer-events: none;
-      font-family: sans-serif;
-    }
+    .floor-btn:hover { background: rgba(33, 150, 243, 0.8); color: #fff; transform: scale(1.05); }
+    .floor-btn:active { transform: scale(0.95); }
   </style>
   <script>
-    window.imageData = {
-      "cam_1_down": "IMG_20260701_104010_00_005.jpg",
-      "cam_1_up": "IMG_20260701_104010_00_005.jpg",
-      "cam_2_down": "IMG_20260701_104226_00_006.jpg",
-      "cam_3_down": "IMG_20260701_104258_00_007.jpg",
-      "cam_4_down": "IMG_20260701_104322_00_008.jpg",
-      "cam_5_down": "IMG_20260701_104351_00_009.jpg",
-      "cam_6_down": "IMG_20260701_104411_00_010.jpg",
-      "cam_7_down": "IMG_20260701_104621_00_011.jpg",
-      "cam_8_down": "IMG_20260701_104656_00_012.jpg",
-      "cam_9_down": "IMG_20260701_104731_00_013.jpg",
-      "cam_10_down": "IMG_20260701_104755_00_014.jpg",
-      "cam_11_down": "IMG_20260701_104827_00_015.jpg",
-      "cam_12_down": "IMG_20260701_104856_00_016.jpg",
-      "cam_13_down": "IMG_20260701_104941_00_017.jpg",
-      "cam_14_down": "IMG_20260701_105011_00_018.jpg",
-      "cam_15_down": "IMG_20260701_105055_00_019.jpg",
-      "cam_16_down": "IMG_20260701_105123_00_020.jpg",
-      "cam_17_down": "IMG_20260701_105310_00_021.jpg",
-      "cam_18_down": "IMG_20260701_105338_00_022.jpg",
-      "cam_19_down": "IMG_20260701_105357_00_023.jpg",
-      "cam_20_down": "IMG_20260701_105422_00_024.jpg",
-      "cam_21_down": "IMG_20260701_105522_00_025.jpg",
-      "cam_22_down": "IMG_20260701_105551_00_026.jpg",
-      "cam_23_down": "IMG_20260701_105638_00_027.jpg",
-      "cam_24_down": "IMG_20260701_105719_00_028.jpg",
-      "cam_25_down": "IMG_20260701_105750_00_029(1).jpg",
-    };
-
     window.currentCamId = 'cam_1';
     window.currentFloor = 'down';
     
-    // UIやミニマップの同期用コンポーネント
     AFRAME.registerComponent('sync-system', {
       tick: function () {
         try {
@@ -284,7 +183,11 @@
   </script>
 </head>
 <body>
-  <div id="loading-overlay">画像を読み込み中...</div>
+  <div id="initial-loader">
+    <div class="spinner"></div>
+    <div style="font-size: 24px; font-weight: bold;">VRデータを読み込み中...</div>
+    <div style="font-size: 14px; color: #aaa; margin-top: 10px;">画像枚数が多い場合、完了まで少し時間がかかります。</div>
+  </div>
 
   <div id="location-overlay">1</div>
 
@@ -442,10 +345,34 @@
     <button id="btn-floor-down" class="floor-btn" style="display:none;">▼ 下の階へ</button>
   </div>
 
-  <a-scene background="color: #000" sync-system>
-    <a-assets>      <img id="first-image" src="IMG_20260701_104010_00_005.jpg" crossorigin="anonymous">
+  <a-scene background="color: #000" sync-system loading-screen="enabled: false">
+    <a-assets>      <img id="cam_1_down" src="IMG_20260701_104010_00_005.jpg" crossorigin="anonymous">
+      <img id="cam_2_down" src="IMG_20260701_104226_00_006.jpg" crossorigin="anonymous">
+      <img id="cam_3_down" src="IMG_20260701_104258_00_007.jpg" crossorigin="anonymous">
+      <img id="cam_4_down" src="IMG_20260701_104322_00_008.jpg" crossorigin="anonymous">
+      <img id="cam_5_down" src="IMG_20260701_104351_00_009.jpg" crossorigin="anonymous">
+      <img id="cam_6_down" src="IMG_20260701_104411_00_010.jpg" crossorigin="anonymous">
+      <img id="cam_7_down" src="IMG_20260701_104621_00_011.jpg" crossorigin="anonymous">
+      <img id="cam_8_down" src="IMG_20260701_104656_00_012.jpg" crossorigin="anonymous">
+      <img id="cam_9_down" src="IMG_20260701_104731_00_013.jpg" crossorigin="anonymous">
+      <img id="cam_10_down" src="IMG_20260701_104755_00_014.jpg" crossorigin="anonymous">
+      <img id="cam_11_down" src="IMG_20260701_104827_00_015.jpg" crossorigin="anonymous">
+      <img id="cam_12_down" src="IMG_20260701_104856_00_016.jpg" crossorigin="anonymous">
+      <img id="cam_13_down" src="IMG_20260701_104941_00_017.jpg" crossorigin="anonymous">
+      <img id="cam_14_down" src="IMG_20260701_105011_00_018.jpg" crossorigin="anonymous">
+      <img id="cam_15_down" src="IMG_20260701_105055_00_019.jpg" crossorigin="anonymous">
+      <img id="cam_16_down" src="IMG_20260701_105123_00_020.jpg" crossorigin="anonymous">
+      <img id="cam_17_down" src="IMG_20260701_105310_00_021.jpg" crossorigin="anonymous">
+      <img id="cam_18_down" src="IMG_20260701_105338_00_022.jpg" crossorigin="anonymous">
+      <img id="cam_19_down" src="IMG_20260701_105357_00_023.jpg" crossorigin="anonymous">
+      <img id="cam_20_down" src="IMG_20260701_105422_00_024.jpg" crossorigin="anonymous">
+      <img id="cam_21_down" src="IMG_20260701_105522_00_025.jpg" crossorigin="anonymous">
+      <img id="cam_22_down" src="IMG_20260701_105551_00_026.jpg" crossorigin="anonymous">
+      <img id="cam_23_down" src="IMG_20260701_105638_00_027.jpg" crossorigin="anonymous">
+      <img id="cam_24_down" src="IMG_20260701_105719_00_028.jpg" crossorigin="anonymous">
+      <img id="cam_25_down" src="IMG_20260701_105750_00_029(1).jpg" crossorigin="anonymous">
 </a-assets>
-    <a-entity id="sky-container"><a-sky id="sky" src="#first-image" rotation="0 0 0" material="transparent:true;opacity:1"></a-sky></a-entity>
+    <a-entity id="sky-container"><a-sky id="sky" src="#cam_1_down" rotation="0 0 0" material="transparent:true;opacity:1"></a-sky></a-entity>
     
     <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
     <a-laser-controls hand="left" raycaster="objects: .clickable"></a-laser-controls>
@@ -1380,6 +1307,14 @@
 </a-entity>
   </a-scene>
   <script>
+    document.querySelector('a-scene').addEventListener('loaded', function () {
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 500);
+      }
+    });
+
     window.addEventListener('keydown', e => {
       const look = document.querySelector('#main-camera').components['look-controls'];
       if (!look) return;
@@ -1414,9 +1349,8 @@
     updateLinksDisplay(window.currentCamId);
 
     function updateFloorButtons(camId) {
-      // ★修正: 辞書から画像の存在を確認
-      const hasUp = !!window.imageData[camId + '_up'];
-      const hasDown = !!window.imageData[camId + '_down'];
+      const hasUp = !!document.querySelector('#' + camId + '_up');
+      const hasDown = !!document.querySelector('#' + camId + '_down');
       
       document.querySelector('#btn-floor-up').style.display = (hasUp && window.currentFloor !== 'up') ? 'block' : 'none';
       document.querySelector('#btn-floor-down').style.display = (hasDown && window.currentFloor !== 'down') ? 'block' : 'none';
@@ -1425,11 +1359,10 @@
 
     let isTransitioning = false;
 
-    // ★修正: 遅延読み込みを考慮したフロア切り替え処理
     function changeFloor(targetFloor) {
       if (isTransitioning) return;
-      const targetSrcUrl = window.imageData[window.currentCamId + '_' + targetFloor];
-      if (!targetSrcUrl) return;
+      const targetId = window.currentCamId + '_' + targetFloor;
+      if (!document.querySelector('#' + targetId)) return;
 
       isTransitioning = true;
       const sky = document.querySelector('#sky');
@@ -1444,37 +1377,25 @@
         
         const newSky = document.createElement('a-sky');
         newSky.setAttribute('id', 'sky');
+        newSky.setAttribute('src', '#' + targetId);
         newSky.setAttribute('rotation', currentRot);
         newSky.setAttribute('material', 'transparent', 'true');
         newSky.setAttribute('material', 'opacity', '0');
-        
-        document.getElementById('loading-overlay').style.display = 'block';
-
-        let timeoutId = setTimeout(() => {
-           if(isTransitioning) {
-               document.getElementById('loading-overlay').style.display = 'none';
-               newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
-               setTimeout(() => { isTransitioning = false; }, 300);
-           }
-        }, 8000); // 8秒で強制フェードイン(エラー回避)
-
-        newSky.addEventListener('materialtextureloaded', function() {
-           clearTimeout(timeoutId);
-           document.getElementById('loading-overlay').style.display = 'none';
-           updateFloorButtons(window.currentCamId);
-           newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
-           setTimeout(() => { isTransitioning = false; }, 300);
-        });
-
-        newSky.setAttribute('src', targetSrcUrl);
         container.appendChild(newSky);
+        
+        updateFloorButtons(window.currentCamId);
+        
+        newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
+        
+        setTimeout(() => {
+          isTransitioning = false;
+        }, 300);
       }, 300);
     }
 
     document.querySelector('#btn-floor-up').addEventListener('click', () => changeFloor('up'));
     document.querySelector('#btn-floor-down').addEventListener('click', () => changeFloor('down'));
 
-    // ★修正: 遅延読み込みを考慮したノード移動処理
     const handleNavClick = function() {
       if (isTransitioning) return; 
       
@@ -1487,14 +1408,14 @@
       const targetName = this.getAttribute('data-name');
       const targetRot = this.getAttribute('data-target-rot') || '0';
       
-      const hasUp = !!window.imageData[nextCamId + '_up'];
-      const hasDown = !!window.imageData[nextCamId + '_down'];
+      const hasUp = !!document.querySelector('#' + nextCamId + '_up');
+      const hasDown = !!document.querySelector('#' + nextCamId + '_down');
       
       let nextFloor = window.currentFloor;
       if (nextFloor === 'up' && !hasUp) nextFloor = 'down';
       if (nextFloor === 'down' && !hasDown) nextFloor = 'up';
       
-      const newSrcUrl = window.imageData[nextCamId + '_' + nextFloor];
+      const targetId = nextCamId + '_' + nextFloor;
 
       const sky = document.querySelector('#sky');
       const container = document.querySelector('#sky-container');
@@ -1507,39 +1428,23 @@
         sky.parentNode.removeChild(sky);
         const newSky = document.createElement('a-sky');
         newSky.setAttribute('id', 'sky');
+        newSky.setAttribute('src', '#' + targetId);
         newSky.setAttribute('rotation', '0 ' + targetRot + ' 0');
         newSky.setAttribute('material', 'transparent', 'true');
         newSky.setAttribute('material', 'opacity', '0');
-        
-        document.getElementById('loading-overlay').style.display = 'block';
-
-        let timeoutId = setTimeout(() => {
-           if(isTransitioning) {
-               document.getElementById('loading-overlay').style.display = 'none';
-               newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
-               setTimeout(() => { isTransitioning = false; }, 300);
-           }
-        }, 8000); // 8秒で強制フェードイン(エラー回避)
-
-        newSky.addEventListener('materialtextureloaded', function() {
-           clearTimeout(timeoutId);
-           document.getElementById('loading-overlay').style.display = 'none';
-           
-           const numMatch = targetName.match(/\d+/);
-           document.querySelector('#location-overlay').textContent = numMatch ? numMatch[0] : targetName;
-
-           updateLinksDisplay(nextCamId);
-           updateFloorButtons(nextCamId);
-           
-           newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
-           
-           setTimeout(() => {
-             isTransitioning = false;
-           }, 300);
-        });
-
-        newSky.setAttribute('src', newSrcUrl);
         container.appendChild(newSky);
+        
+        const numMatch = targetName.match(/\d+/);
+        document.querySelector('#location-overlay').textContent = numMatch ? numMatch[0] : targetName;
+
+        updateLinksDisplay(nextCamId);
+        updateFloorButtons(nextCamId);
+        
+        newSky.setAttribute('animation__fade', {property: 'material.opacity', from: 0, to: 1, dur: 300});
+        
+        setTimeout(() => {
+          isTransitioning = false;
+        }, 300);
       }, 300);
     };
 
