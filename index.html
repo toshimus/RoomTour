@@ -193,6 +193,49 @@
         }, {passive: false});
       }
     });
+
+    AFRAME.registerComponent('custom-touch-controls', {
+      init: function () {
+        this.pitchObject = this.el.components['look-controls'].pitchObject;
+        this.yawObject = this.el.components['look-controls'].yawObject;
+        this.isDragging = false;
+        this.previousClientX = 0;
+        this.previousClientY = 0;
+
+        const onTouchStart = (e) => {
+          if (e.touches.length === 1) {
+            this.isDragging = true;
+            this.previousClientX = e.touches[0].clientX;
+            this.previousClientY = e.touches[0].clientY;
+          }
+        };
+
+        const onTouchMove = (e) => {
+          if (this.isDragging && e.touches.length === 1) {
+            if(e.target.closest('#minimap-overlay') || e.target.closest('#ui-overlay') || e.target.closest('#floor-controls') || e.target.closest('#gyro-controls')) return;
+            
+            const deltaX = e.touches[0].clientX - this.previousClientX;
+            const deltaY = e.touches[0].clientY - this.previousClientY;
+            
+            this.yawObject.rotation.y += deltaX * 0.004;
+            this.pitchObject.rotation.x += deltaY * 0.004;
+            
+            this.pitchObject.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.pitchObject.rotation.x));
+            
+            this.previousClientX = e.touches[0].clientX;
+            this.previousClientY = e.touches[0].clientY;
+          }
+        };
+
+        const onTouchEnd = () => {
+          this.isDragging = false;
+        };
+
+        window.addEventListener('touchstart', onTouchStart, {passive: false});
+        window.addEventListener('touchmove', onTouchMove, {passive: false});
+        window.addEventListener('touchend', onTouchEnd);
+      }
+    });
   </script>
 </head>
 <body>
@@ -359,7 +402,7 @@
   </div>
 
   <div id="gyro-controls">
-    <button id="btn-gyro" class="gyro-btn">📱 ジャイロ: ON</button>
+    <button id="btn-gyro" class="gyro-btn">📱 ジャイロ: OFF</button>
   </div>
 
   <a-scene background="color: #000" sync-system loading-screen="enabled: false">
@@ -396,7 +439,7 @@
     <a-laser-controls hand="left" raycaster="objects: .clickable"></a-laser-controls>
     <a-laser-controls hand="right" raycaster="objects: .clickable"></a-laser-controls>
 
-    <a-camera id="main-camera" look-controls="reverseMouseDrag: true" fov-zoom-controls></a-camera>
+    <a-camera id="main-camera" look-controls="reverseMouseDrag: true; magicWindowTrackingEnabled: false; touchEnabled: false" fov-zoom-controls custom-touch-controls></a-camera>
     
     <a-entity id="links">      <a-entity class="link-group link-from-cam_1" visible="false">
         <a-plane class="nav-arrow" data-angle="0.00" data-cam-id="cam_2" data-name="場所 2" data-target-rot="0"
@@ -1528,7 +1571,9 @@
 
     // ジャイロセンサー（モーションセンサー）のON/OFF切り替え
     const btnGyro = document.querySelector('#btn-gyro');
-    let gyroEnabled = true;
+    let gyroEnabled = false; // 初期値をOFFに設定
+    btnGyro.classList.add('gyro-off'); // 初期の見た目をOFFに
+
     btnGyro.addEventListener('click', () => {
       gyroEnabled = !gyroEnabled;
       const cam = document.querySelector('#main-camera');
